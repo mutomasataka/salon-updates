@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.DS_Store
+.venv
+venv/
+ENV/
+dist/
+data/members.csv
