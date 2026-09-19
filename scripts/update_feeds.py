@@ -328,8 +328,9 @@ def generate_rss_feed(data: dict, output_path: str):
 
 
 def render_html(data: dict, template_dir: str, output_path: str):
-    """HTMLを生成して出力"""
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    """HTMLを生成して出力し、静的アセット（アイコン・マニフェスト）をコピー"""
+    out_dir = os.path.dirname(output_path)
+    os.makedirs(out_dir, exist_ok=True)
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template("index.html")
     rendered = template.render(**data)
@@ -337,6 +338,15 @@ def render_html(data: dict, template_dir: str, output_path: str):
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(rendered)
     print(f"[SUCCESS] HTMLを出力しました: {output_path}")
+
+    # アイコンやmanifest等の静的ファイルをdistへコピー
+    import shutil
+    for fname in os.listdir(template_dir):
+        if fname.endswith(('.png', '.ico', '.svg', '.json', '.jpg', '.webp')):
+            src = os.path.join(template_dir, fname)
+            dst = os.path.join(out_dir, fname)
+            shutil.copy2(src, dst)
+            print(f"[INFO] 静的アセットをコピーしました: {fname}")
 
 
 def main():
