@@ -271,6 +271,9 @@ def fetch_member_updates(members: list) -> dict:
     # 全記事を公開日時降順でソート
     all_articles.sort(key=lambda x: x["published_dt"], reverse=True)
 
+    # 新着記事一覧はスマホでの見やすさを考慮して最新50件に絞り込み
+    all_articles = all_articles[:50]
+
     # 各メンバーおよび記事にファビコンURLを付与
     for m in members_data:
         netloc = urlparse(m["url"]).netloc
