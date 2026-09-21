@@ -239,6 +239,7 @@ def fetch_member_updates(members: list) -> dict:
                         "summary": summary,
                         "published_at": published_at.strftime('%Y-%m-%d %H:%M'),
                         "published_dt": published_at,
+                        "published_ts": int(published_at.timestamp() * 1000),
                         "is_new_today": is_new_today,
                         "is_recent": is_recent,
                     }

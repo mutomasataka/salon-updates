@@ -1,7 +1,7 @@
 on:
   schedule:
-    # 毎日 日本時間 朝6:00 (UTC 21:00) に自動実行
-    - cron: '0 21 * * *'
+    # 毎日 日本時間 朝5:55 (UTC 20:55) に自動実行（混雑回避）
+    - cron: '55 20 * * *'
   workflow_dispatch: # GitHubのブラウザから手動で即時実行可能
   push:
     branches:

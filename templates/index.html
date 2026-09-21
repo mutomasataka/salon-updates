@@ -127,12 +127,12 @@
     <!-- 本日の更新ステータスインフォ -->
     <div class="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/20 rounded-2xl p-3.5 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+        <div id="statusTodayCount" class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-lg shadow-sm">
           {{ updated_today_count }}
         </div>
         <div>
           <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">24時間以内の新規更新</p>
-          <p class="text-sm font-bold text-slate-800 dark:text-slate-100">
+          <p id="statusTodayText" class="text-sm font-bold text-slate-800 dark:text-slate-100">
             {% if updated_today_count > 0 %}
               {{ updated_today_count }} 名のサイトが新着記事を投稿しました 🎉
             {% else %}
@@ -175,11 +175,13 @@
                 <span class="truncate text-slate-500 dark:text-slate-400">{{ article.site_title }}</span>
               </div>
               <div class="flex items-center gap-1.5 shrink-0 ml-2">
-                {% if article.is_new_today %}
-                  <span class="px-2 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full animate-pulse">NEW</span>
-                {% elif article.is_recent %}
-                  <span class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">3日以内</span>
-                {% endif %}
+                <span class="badge-container" data-badge-for="{{ article.published_ts }}">
+                  {% if article.is_new_today %}
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full animate-pulse">NEW</span>
+                  {% elif article.is_recent %}
+                    <span class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">3日以内</span>
+                  {% endif %}
+                </span>
                 <time class="text-[11px] font-mono">{{ article.published_at }}</time>
               </div>
             </div>
@@ -220,15 +222,18 @@
       {% for member in members %}
         <div 
           class="member-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 shadow-xs"
-          data-search="{{ member.name }} {{ member.site_title }} {% for a in member.articles %}{{ a.title }} {% endfor %}">
+          data-search="{{ member.name }} {{ member.site_title }} {% for a in member.articles %}{{ a.title }} {% endfor %}"
+          data-member-articles-ts="[{% for a in member.articles %}{{ a.published_ts }}{% if not loop.last %},{% endif %}{% endfor %}]">
           <div class="flex items-start justify-between mb-3">
             <div>
               <div class="flex items-center gap-2">
                 <img src="{{ member.favicon }}" alt="" class="w-5 h-5 rounded shrink-0" onerror="this.style.display='none'">
                 <h3 class="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100">{{ member.name }}</h3>
-                {% if member.has_new_today %}
-                  <span class="px-2 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full">本日更新あり</span>
-                {% endif %}
+                <span class="member-badge-container">
+                  {% if member.has_new_today %}
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full">本日更新あり</span>
+                  {% endif %}
+                </span>
               </div>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ member.site_title }}</p>
             </div>
@@ -244,9 +249,11 @@
                 <a href="{{ article.link }}" target="_blank" rel="noopener noreferrer" class="block p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-50/50 dark:hover:bg-slate-800 transition-colors border border-slate-100 dark:border-slate-800">
                   <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
                     <span class="font-mono">{{ article.published_at }}</span>
-                    {% if article.is_new_today %}
-                      <span class="text-[10px] font-bold text-rose-500">NEW</span>
-                    {% endif %}
+                    <span class="badge-container" data-badge-for="{{ article.published_ts }}">
+                      {% if article.is_new_today %}
+                        <span class="text-[10px] font-bold text-rose-500">NEW</span>
+                      {% endif %}
+                    </span>
                   </div>
                   <div class="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-1">
                     {{ article.title }}
@@ -293,6 +300,70 @@
         window.location.replace(url.toString());
       }, 300);
     }
+
+    // スマホ側でのリアルタイム「NEW」「3日以内」判定と集計
+    function updateRealtimeBadges() {
+      const now = Date.now();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      const threeDaysMs = 72 * 60 * 60 * 1000;
+
+      // 1. 各記事のバッジ判定
+      document.querySelectorAll('.badge-container').forEach(container => {
+        const tsAttr = container.getAttribute('data-badge-for');
+        if (!tsAttr) return;
+        const ts = parseInt(tsAttr, 10);
+        if (isNaN(ts)) return;
+
+        const diff = now - ts;
+        if (diff >= 0 && diff <= oneDayMs) {
+          container.innerHTML = '<span class="px-2 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full animate-pulse">NEW</span>';
+        } else if (diff > oneDayMs && diff <= threeDaysMs) {
+          container.innerHTML = '<span class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">3日以内</span>';
+        } else {
+          container.innerHTML = '';
+        }
+      });
+
+      // 2. メンバーカードの「本日更新あり」バッジと人数集計
+      let todayUpdatedMemberCount = 0;
+      document.querySelectorAll('.member-card').forEach(card => {
+        const tsListStr = card.getAttribute('data-member-articles-ts') || '[]';
+        try {
+          const tsList = JSON.parse(tsListStr).filter(t => typeof t === 'number' && !isNaN(t));
+          const hasNewToday = tsList.some(ts => {
+            const diff = now - ts;
+            return diff >= 0 && diff <= oneDayMs;
+          });
+
+          const badgeContainer = card.querySelector('.member-badge-container');
+          if (badgeContainer) {
+            badgeContainer.innerHTML = hasNewToday 
+              ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full">本日更新あり</span>' 
+              : '';
+          }
+
+          if (hasNewToday) {
+            todayUpdatedMemberCount++;
+          }
+        } catch (e) {}
+      });
+
+      // 3. 上部ステータス表示（緑の数字とメッセージ）のリアルタイム更新
+      const countEl = document.getElementById('statusTodayCount');
+      const textEl = document.getElementById('statusTodayText');
+      if (countEl) {
+        countEl.textContent = todayUpdatedMemberCount;
+      }
+      if (textEl) {
+        textEl.textContent = todayUpdatedMemberCount > 0 
+          ? `${todayUpdatedMemberCount} 名のサイトが新着記事を投稿しました 🎉` 
+          : '24時間以内に更新されたサイトはまだありません';
+      }
+    }
+
+    // 初回実行 & 1分ごとの自動チェック
+    updateRealtimeBadges();
+    setInterval(updateRealtimeBadges, 60000);
 
     // タブ切り替え
     function switchTab(tab) {
